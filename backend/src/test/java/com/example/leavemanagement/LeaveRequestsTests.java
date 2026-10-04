@@ -19,6 +19,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -104,5 +105,42 @@ class LeaveRequestsTests {
         // Assert
         assertEquals("Not enough vacation balance", exception.getMessage());
         assertEquals(before, leaveRequests.count());
+    }
+
+    @Test
+    void searchByEmployeeName_ReturnsMatchingRequests() {
+        Employee john = new Employee();
+        john.setName("John Smith");
+        john.setAnnualQuota(20);
+        employees.save(john);
+
+        Employee alice = new Employee();
+        alice.setName("Alice Brown");
+        alice.setAnnualQuota(20);
+        employees.save(alice);
+
+        LeaveRequest johnRequest = new LeaveRequest();
+        johnRequest.setEmployeeId(john.getId());
+        johnRequest.setType(LeaveType.VACATION);
+        johnRequest.setStartDate(LocalDate.of(2026, 1, 1));
+        johnRequest.setEndDate(LocalDate.of(2026, 1, 2));
+        johnRequest.setDays(2);
+        johnRequest.setStatus(LeaveStatus.PENDING);
+        leaveRequests.save(johnRequest);
+
+        LeaveRequest aliceRequest = new LeaveRequest();
+        aliceRequest.setEmployeeId(alice.getId());
+        aliceRequest.setType(LeaveType.VACATION);
+        aliceRequest.setStartDate(LocalDate.of(2026, 2, 1));
+        aliceRequest.setEndDate(LocalDate.of(2026, 2, 2));
+        aliceRequest.setDays(2);
+        aliceRequest.setStatus(LeaveStatus.PENDING);
+        leaveRequests.save(aliceRequest);
+
+        List<LeaveRequest> result =
+                leaveRequestService.searchByEmployeeName("john");
+
+        assertEquals(1, result.size());
+        assertEquals(john.getId(), result.get(0).getEmployeeId());
     }
 }

@@ -23,22 +23,14 @@ public class LeaveRequestsController {
     // GET /api/leave-requests
     @GetMapping
     public ResponseEntity<List<LeaveRequest>> getAll() {
-        try {
-            return ResponseEntity.ok(leaveRequestService.getAll());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        return ResponseEntity.ok(leaveRequestService.getAll());
     }
 
     // GET /api/leave-requests/search?name=Dana
     // Lets the UI quickly find requests by employee name.
     @GetMapping("/search")
     public ResponseEntity<List<LeaveRequest>> search(@RequestParam String name) {
-        try {
-            return ResponseEntity.ok(leaveRequestService.search(name));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        return ResponseEntity.ok(leaveRequestService.searchByEmployeeName(name));
     }
 
     // POST /api/leave-requests
