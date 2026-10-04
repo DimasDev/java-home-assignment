@@ -1,6 +1,5 @@
 package com.example.leavemanagement;
 
-import com.example.leavemanagement.controller.LeaveRequestsController;
 import com.example.leavemanagement.dto.CreateLeaveRequestDto;
 import com.example.leavemanagement.model.Employee;
 import com.example.leavemanagement.model.LeaveRequest;
@@ -8,10 +7,11 @@ import com.example.leavemanagement.model.LeaveStatus;
 import com.example.leavemanagement.model.LeaveType;
 import com.example.leavemanagement.repository.EmployeeRepository;
 import com.example.leavemanagement.repository.LeaveRequestRepository;
+import com.example.leavemanagement.service.LeaveRequestService;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -21,7 +21,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 // Runs against a real, throwaway PostgreSQL started by Testcontainers.
 // (Docker must be available on the machine running the tests.)
@@ -40,7 +40,7 @@ class LeaveRequestsTests {
     }
 
     @Autowired
-    private LeaveRequestsController controller;
+    private LeaveRequestService leaveRequestService;
 
     @Autowired
     private EmployeeRepository employees;
@@ -56,8 +56,6 @@ class LeaveRequestsTests {
         emp.setAnnualQuota(20);
         employees.save(emp);
 
-        long before = leaveRequests.count();
-
         CreateLeaveRequestDto dto = new CreateLeaveRequestDto();
         dto.setEmployeeId(emp.getId());
         dto.setType(LeaveType.VACATION);
@@ -65,11 +63,11 @@ class LeaveRequestsTests {
         dto.setEndDate(LocalDate.of(2026, 3, 3)); // 3 days, well within the quota
 
         // Act
-        ResponseEntity<?> result = controller.create(dto);
+        LeaveRequest result = leaveRequestService.create(dto);
 
         // Assert
-        assertTrue(result.getStatusCode().is2xxSuccessful());
-        assertEquals(before + 1, leaveRequests.count());
+        Assertions.assertNotNull(result.getId());
+        assertEquals(LeaveStatus.PENDING, result.getStatus());
     }
 
     @Test
@@ -98,10 +96,13 @@ class LeaveRequestsTests {
         dto.setEndDate(LocalDate.of(2026, 3, 4));
 
         // Act
-        ResponseEntity<?> result = controller.create(dto);
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> leaveRequestService.create(dto)
+        );
 
         // Assert
-        assertTrue(result.getStatusCode().is4xxClientError());
+        assertEquals("Not enough vacation balance", exception.getMessage());
         assertEquals(before, leaveRequests.count());
     }
 }
