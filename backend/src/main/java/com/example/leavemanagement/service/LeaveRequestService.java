@@ -8,6 +8,7 @@ import com.example.leavemanagement.model.LeaveType;
 import com.example.leavemanagement.repository.EmployeeRepository;
 import com.example.leavemanagement.repository.LeaveRequestRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -60,6 +61,40 @@ public class LeaveRequestService {
         request.setEndDate(dto.getEndDate());
         request.setDays(days);
         request.setStatus(LeaveStatus.PENDING);
+
+        return leaveRequestRepository.save(request);
+    }
+
+    @Transactional
+    public LeaveRequest approve(Long requestId) {
+        LeaveRequest request = leaveRequestRepository.findByIdForUpdate(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Leave request not found"));
+
+        if (request.getStatus() != LeaveStatus.PENDING) {
+            throw new IllegalArgumentException("Only pending requests can be approved");
+        }
+
+        Employee employee = employeeRepository
+                .findByIdForUpdate(request.getEmployeeId())
+                .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
+
+        if (request.getType() == LeaveType.VACATION) {
+            int used = leaveRequestRepository
+                    .findByEmployeeIdAndTypeAndStatus(
+                            employee.getId(),
+                            LeaveType.VACATION,
+                            LeaveStatus.APPROVED
+                    )
+                    .stream()
+                    .mapToInt(LeaveRequest::getDays)
+                    .sum();
+
+            if (request.getDays() > employee.getAnnualQuota() - used) {
+                throw new IllegalArgumentException("Not enough vacation balance");
+            }
+        }
+
+        request.setStatus(LeaveStatus.APPROVED);
 
         return leaveRequestRepository.save(request);
     }

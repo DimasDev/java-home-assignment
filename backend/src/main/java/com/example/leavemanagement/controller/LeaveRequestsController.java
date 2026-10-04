@@ -42,4 +42,13 @@ public class LeaveRequestsController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<?> approve(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(leaveRequestService.approve(id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
