@@ -7,14 +7,33 @@ export interface Employee {
   annualQuota: number;
 }
 
+export enum LeaveType {
+  VACATION = 0,
+  SICK = 1,
+  UNPAID = 2
+}
+
+export enum LeaveStatus {
+  PENDING = 0,
+  APPROVED = 1,
+  REJECTED = 2
+}
+
 export interface LeaveRequest {
   id: number;
   employeeId: number;
   // Populated by the API on reads; absent on the response to a create.
   employee?: Employee;
-  type: number;
+  type: LeaveType;
   startDate: string;
   endDate: string;
-  status: number;
+  status: LeaveStatus;
   days: number;
+}
+
+export interface CreateLeaveRequest {
+  employeeId: number;
+  type: LeaveType;
+  startDate: string;
+  endDate: string;
 }
