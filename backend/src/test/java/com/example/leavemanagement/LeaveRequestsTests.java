@@ -3,6 +3,8 @@ package com.example.leavemanagement;
 import com.example.leavemanagement.controller.LeaveRequestsController;
 import com.example.leavemanagement.dto.CreateLeaveRequestDto;
 import com.example.leavemanagement.model.Employee;
+import com.example.leavemanagement.model.LeaveRequest;
+import com.example.leavemanagement.model.LeaveStatus;
 import com.example.leavemanagement.model.LeaveType;
 import com.example.leavemanagement.repository.EmployeeRepository;
 import com.example.leavemanagement.repository.LeaveRequestRepository;
@@ -18,7 +20,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // Runs against a real, throwaway PostgreSQL started by Testcontainers.
 // (Docker must be available on the machine running the tests.)
@@ -69,7 +72,36 @@ class LeaveRequestsTests {
         assertEquals(before + 1, leaveRequests.count());
     }
 
-    // TODO (candidate): add a test that proves the balance bug is fixed —
-    // an employee who has already used most of the quota should NOT be able
-    // to create a request that pushes them over the annual quota.
+    @Test
+    void create_WhenVacationExceedsRemainingQuota_ReturnsBadRequest() {
+        // Arrange
+        Employee emp = new Employee();
+        emp.setName("Test Employee");
+        emp.setAnnualQuota(20);
+        employees.save(emp);
+
+        LeaveRequest approvedRequest = new LeaveRequest();
+        approvedRequest.setEmployeeId(emp.getId());
+        approvedRequest.setType(LeaveType.VACATION);
+        approvedRequest.setStartDate(LocalDate.of(2026, 1, 1));
+        approvedRequest.setEndDate(LocalDate.of(2026, 1, 17));
+        approvedRequest.setDays(17);
+        approvedRequest.setStatus(LeaveStatus.APPROVED);
+        leaveRequests.save(approvedRequest);
+
+        long before = leaveRequests.count();
+
+        CreateLeaveRequestDto dto = new CreateLeaveRequestDto();
+        dto.setEmployeeId(emp.getId());
+        dto.setType(LeaveType.VACATION);
+        dto.setStartDate(LocalDate.of(2026, 3, 1));
+        dto.setEndDate(LocalDate.of(2026, 3, 4));
+
+        // Act
+        ResponseEntity<?> result = controller.create(dto);
+
+        // Assert
+        assertTrue(result.getStatusCode().is4xxClientError());
+        assertEquals(before, leaveRequests.count());
+    }
 }
